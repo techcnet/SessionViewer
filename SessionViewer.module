@@ -1,0 +1,353 @@
+<?php namespace ProcessWire;
+
+/**
+ * Session Viewer for ProcessWire
+ * Lists all session files and displays the session data.
+ *
+ * @author tech-c.net
+ * @license Licensed under GNU/GPL v2
+ * @link https://tech-c.net/posts/session-viewer-for-processwire/
+ * @version 1.0.2
+ * 
+ * @see Forum Thread: https://processwire.com/talk/topic/.../
+ * @see Donate: https://www.paypal.me/techcnet/
+ */
+
+class SessionViewer extends Process {
+  const PageName = 'session-viewer';
+  const PagePermission = 'session-viewer';
+  
+  private $serialize_handler;
+  
+  /**
+   * Return information about this module
+   */
+  public static function getModuleInfo() {
+    return array(
+      'title' => 'Session Viewer',
+      'summary' => 'Lists all session files and displays the session data.',
+      'href' => 'https://tech-c.net/posts/session-viewer-for-processwire/',
+      'author' => 'tech-c.net',
+      'version' => 102,
+      'icon' => 'id-card',
+      'permission' => self::PagePermission,
+      'autoload' => false,
+      'singular' => true);
+  }
+  /**
+   * Called only when the module is installed
+   */
+  public function ___install () {
+    $pages = $this->wire('pages');
+    $info = self::getModuleInfo();
+    $p = $pages->get('template=admin, name='.self::PageName);
+    if ($p->id) {
+      $p->delete();
+      $this->message('Delete page: '.$p->path);
+    }
+    $page = new Page();
+    $page->template = 'admin';
+    $page->parent = $pages->get($this->config->adminRootPageID)->child('name=setup');
+    $page->title = $info['title'];
+    $page->name = self::PageName;
+    $page->process = $this;
+    $page->save();
+    $this->message('Create page: '.$page->path);
+
+    $p = $this->wire('permissions')->get(self::PagePermission);
+    if ($p->id) {
+      $p->delete();
+      $this->message('Delete permission: '.self::PagePermission);
+    }
+    $permission = new Permission();
+    $permission->name = self::PagePermission;
+    $permission->title = $info['title'];
+    $permission->save();
+    $this->message('Create permission: '.self::PagePermission);
+  }
+  /**
+   * Called only when the module is uninstalled
+   */
+  public function ___uninstall () {
+    $pages = $this->wire('pages');
+    $mbPage = $pages->get('template=admin, process='.$moduleID.', name='.self::PageName);
+    if ($mbPage->id) {
+      $mbPage->delete();
+      $this->message('Delete page: '.$mbPage->path);
+    }
+
+    $permission = $this->wire('permissions')->get(self::PagePermission);
+    if ($permission->id){
+      $permission->delete();
+      $this->message('Delete permission: '.self::PagePermission);
+    }
+  }
+  /**
+   *
+   */
+  public function init() {
+    $this->serialize_handler = ini_get('session.serialize_handler');
+  }
+  /**
+   * See: https://www.php.net/manual/en/function.session-decode.php#108037
+   */
+  private function session_unserialize($session_data) {
+    switch ($this->serialize_handler) {
+      case 'php':
+        return $this->unserialize_php($session_data);
+        break;
+      case 'php_binary':
+        return $this->unserialize_phpbinary($session_data);
+        break;
+      case 'php_serialize':
+        return $this->unserialize_phpserialize($session_data);
+        break;
+      default:
+        return null;
+    }
+  }
+  /**
+   * See: https://www.php.net/manual/en/function.session-decode.php#108037
+   */
+  private function unserialize_php($session_data) {
+    $return_data = array();
+    $offset = 0;
+    while ($offset < strlen($session_data)) {
+      if (!strstr(substr($session_data, $offset), '|')) {
+        return $return_data;
+      }
+      $pos = strpos($session_data, '|', $offset);
+      $num = $pos - $offset;
+      $varname = substr($session_data, $offset, $num);
+      $offset += $num + 1;
+      $data = unserialize(substr($session_data, $offset));
+      $return_data[$varname] = $data;
+      $offset += strlen(serialize($data));
+    }
+    return $return_data;
+  }
+  /**
+   * See: https://www.php.net/manual/en/function.session-decode.php#108037
+   */
+  private function unserialize_phpbinary($session_data) {
+    $return_data = array();
+    $offset = 0;
+    while ($offset < strlen($session_data)) {
+      $num = ord($session_data[$offset]);
+      $offset += 1;
+      $varname = substr($session_data, $offset, $num);
+      $offset += $num;
+      $data = unserialize(substr($session_data, $offset));
+      $return_data[$varname] = $data;
+      $offset += strlen(serialize($data));
+    }
+    return $return_data;
+  }
+  /**
+   * 
+   */
+  private function unserialize_phpserialize($session_data) {
+    return unserialize($session_data);
+  }
+  /**
+   * Shows the session viewer
+   */
+  public function ___execute() {
+    $module_url = $this->config()->urls->siteModules.$this->className;
+    if ($this->use_nicer) {
+      $this->config()->styles->add($module_url.'/nice_r.css');
+      $this->config()->scripts->add($module_url.'/nice_r.js');
+      require_once(__DIR__.'/Nicer.php');
+    }
+    $this->config()->styles->add($module_url.'/sessionviewer.css');
+
+    $path = $this->config->paths->sessions;
+    if ($path == '') {
+      return '<p class="sv_error">'.__('Session path is empty!').'</p>';
+    }
+
+    $result = '';
+
+    $delete = $this->input->post('delete', 'int', 0);
+    if ((isset($delete)) && ($delete == 1)) {
+      $delid = $this->input->post('delid', 'array', []);
+      $i = 0;
+      if (isset($delid)) {
+        foreach ($delid as $delfile) {
+          if (file_exists($path.$delfile)) {
+            if (unlink($path.$delfile)) {
+              $i++;
+            }
+          }
+        }
+        $result .= '<p class="sv_success">'.$i.__(' session(s) deleted.').'</p>';
+      }
+    }
+
+    $start = $this->input->post('start', 'int', 1);
+    if (!isset($start)) $start = 1;
+    if ($start < 1) $start = 1;
+
+    $datetime = new \DateTime();
+    $datetime->setTimezone(new \DateTimeZone($this->time_zone));
+
+    $current_session = session_id();
+    $dir = new \DirectoryIterator($path);
+
+    $sorted_keys = array();
+    foreach ($dir as $fileinfo) {
+      if (($fileinfo->isDot()) ||
+          (!$fileinfo->isFile()) ||
+          (!str_starts_with($fileinfo->getFileName(), 'sess_'))) {
+        continue;
+      }
+      $sorted_keys[$fileinfo->key()] = $fileinfo->getMTime();
+    }
+
+    if ($this->asort) {
+      uasort($sorted_keys, 
+        function ($a, $b) {
+          return ($b < $a);
+        }
+      );
+    } else {
+      uasort($sorted_keys, 
+        function ($a, $b) {
+          return ($b > $a);
+        }
+      );
+    }
+
+    if ($this->row_limit < count($sorted_keys)) {
+      $result .= '<form method="POST" class="sv_pagination">';
+        $result .= '<select name="start" onchange="this.form.submit();">';
+        for ($i=1; $i<=count($sorted_keys); $i+=$this->row_limit) {
+          $result .= '<option value="'.$i.'"';
+          if ($i == $start) {
+            $result .= ' selected="selected"';
+          }
+          $stop = $i+$this->row_limit-1;
+          if ($stop > count($sorted_keys)) {
+            $stop = count($sorted_keys);
+          }
+          $result .= '>'.$i.' - '.$stop.'</option>';
+        }
+        $result .= '</select>';
+      $result .= '</form>';
+    }
+
+    $i = 0;
+    $result .= '<form method="POST" autocomplete="off" action="" class="sv_list">';
+      foreach ($sorted_keys as $key => $value) {
+        $dir->seek($key);
+        $file = $dir->current();
+        $session = file_get_contents($file->getRealPath());
+        if (isset($session)) {
+          $datetime->setTimestamp($file->getCTime());
+          $session = $this->session_unserialize($session);
+          if (!isset($session)) {
+            continue;
+          }
+
+          $i++;
+          if ($i < $start) {
+            continue;
+          }
+
+          $file_name = $file->getFileName();
+
+          $result .= '<div class="sv_item">';
+            $result .= '<div class="sv_itemcaption">';
+              $result .= '<label class="sv_label">';
+                $result .= '<input type="checkbox" class="sv_checkbox" name="delid[]" value="'.$file_name.'">';
+                $result .= '<strong';
+                if (strpos($file_name, $current_session)!== false) {
+                  $result .= ' class="sv_current" title="'.__('Current session').'"';
+                }
+                $result .= '>'.$file_name.'</strong><br />';
+              $result .= '</label>';
+            $result .= '</div>';
+            
+            $result .= '<small>'.__('Last changed').': '.$datetime->format($this->time_format).'</small><br />';
+            $result .= '<small>'.__('Size').': '.$file->getSize().__(' bytes').'</small><br />';
+            if ($this->use_nicer) {
+              $n = new \Nicer($session);
+              $result .= $n->generate();
+            } else {
+              $result .= '<pre class="sv_pre">';
+              $result .= htmlspecialchars(print_r($session, true), ENT_QUOTES);
+              $result .= '</pre>';
+            }
+          $result .= '</div>';
+
+          if ($i >= ($start + $this->row_limit - 1)) {
+            break;
+          }
+        }
+      }
+      $result .= '<script>';
+        $result .= 'function toggle(source){';
+          $result .= 'var allInputs = document.getElementsByTagName("input");';
+          $result .= 'for (var i = 0, max = allInputs.length; i < max; i++){';
+            $result .= 'if (allInputs[i].name === "delid[]"){';
+              $result .= 'allInputs[i].checked = source.checked;';
+            $result .= '}';
+          $result .= '}';
+        $result .= '}';
+      $result .= '</script>';
+
+      $result .= '<div class="sv_selall">';
+        $result .= '<input type="hidden" name="delete" value="1">';
+        $result .= '<label class="sv_label">';
+          $result .= '<input type="checkbox" class="sv_checkbox" onClick="toggle(this)">';
+          $result .= __('Select all');
+        $result .= '</label>';
+        $result .= '<button class="ui-button" type="submit">'.__('Delete').'</button>';
+      $result .= '</div>';
+    
+    $result .= '</form>';
+
+    if ($this->row_limit < count($sorted_keys)) {
+      $result .= '<form method="POST" class="sv_pagination">';
+        $result .= '<select name="start" onchange="this.form.submit();">';
+        for ($i=1; $i<count($sorted_keys); $i+=$this->row_limit) {
+          $result .= '<option value="'.$i.'"';
+          if ($i == $start) {
+            $result .= ' selected="selected"';
+          }
+          $stop = $i+$this->row_limit-1;
+          if ($stop > count($sorted_keys)) {
+            $stop = count($sorted_keys);
+          }
+          $result .= '>'.$i.' - '.$stop.'</option>';
+        }
+        $result .= '</select>';
+      $result .= '</form>';
+    }
+
+    $result .= '<div class="sv_configbtn">';
+      $meta = array(
+        'id' => 'moduleConfigLink',
+        'href' => "{$this->config->urls->admin}module/edit?name={$this->className}",
+        'value' => __('Configuration'),
+        'icon' => 'cog'
+      );
+      $moduleConfigLinkButton = $this->populateInputField($this->modules->get('InputfieldButton'), $meta)->addClass('');
+      $result .= $moduleConfigLinkButton->render();
+    $result .= '</div>';
+
+    return $result;
+  }
+  /**
+   * Generates a link to the configuration page
+   */
+  private function populateInputField($field, $meta) {
+    foreach ($meta as $metaNames => $metaInfo) {
+      $metaNames = explode('+', $metaNames);
+      foreach ($metaNames as $metaName) {
+        $field->$metaName = $metaInfo;
+      }
+    }
+    return $field;
+  }
+}
