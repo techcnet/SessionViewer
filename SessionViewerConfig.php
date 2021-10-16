@@ -9,7 +9,7 @@
  * @link https://tech-c.net/posts/session-viewer-for-processwire/
  * @version 1.0.2
  * 
- * @see Forum Thread: https://processwire.com/talk/topic/.../
+ * @see Forum Thread: https://processwire.com/talk/topic/26238-session-viewer/
  * @see Donate: https://www.paypal.me/techcnet/
  */
 
