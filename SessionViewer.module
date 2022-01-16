@@ -7,11 +7,19 @@
  * @author tech-c.net
  * @license Licensed under GNU/GPL v2
  * @link https://tech-c.net/posts/session-viewer-for-processwire/
- * @version 1.0.2
+ * @version 1.0.3
  * 
  * @see Forum Thread: https://processwire.com/talk/topic/26238-session-viewer/
  * @see Donate: https://www.paypal.me/techcnet/
  */
+/**
+ * Compatibility for PHP versions < 8
+ */
+if (!function_exists('str_starts_with')) {
+  function str_starts_with($haystack, $needle) {
+      return (string)$needle !== '' && strncmp($haystack, $needle, strlen($needle)) === 0;
+  }
+}
 
 class SessionViewer extends Process {
   const PageName = 'session-viewer';
@@ -28,7 +36,7 @@ class SessionViewer extends Process {
       'summary' => 'Lists all session files and displays the session data.',
       'href' => 'https://tech-c.net/posts/session-viewer-for-processwire/',
       'author' => 'tech-c.net',
-      'version' => 102,
+      'version' => 103,
       'icon' => 'id-card',
       'permission' => self::PagePermission,
       'autoload' => false,
