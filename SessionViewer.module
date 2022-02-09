@@ -7,7 +7,7 @@
  * @author tech-c.net
  * @license Licensed under GNU/GPL v2
  * @link https://tech-c.net/posts/session-viewer-for-processwire/
- * @version 1.0.2
+ * @version 1.0.4
  * 
  * @see Forum Thread: https://processwire.com/talk/topic/26238-session-viewer/
  * @see Donate: https://www.paypal.me/techcnet/
@@ -28,7 +28,7 @@ class SessionViewer extends Process {
       'summary' => 'Lists all session files and displays the session data.',
       'href' => 'https://tech-c.net/posts/session-viewer-for-processwire/',
       'author' => 'tech-c.net',
-      'version' => 102,
+      'version' => 104,
       'icon' => 'id-card',
       'permission' => self::PagePermission,
       'autoload' => false,
@@ -199,7 +199,7 @@ class SessionViewer extends Process {
     foreach ($dir as $fileinfo) {
       if (($fileinfo->isDot()) ||
           (!$fileinfo->isFile()) ||
-          (!str_starts_with($fileinfo->getFileName(), 'sess_'))) {
+          (strpos($fileinfo->getFileName(), 'sess_') !== 0)) {
         continue;
       }
       $sorted_keys[$fileinfo->key()] = $fileinfo->getMTime();
@@ -208,13 +208,19 @@ class SessionViewer extends Process {
     if ($this->asort) {
       uasort($sorted_keys, 
         function ($a, $b) {
-          return ($b < $a);
+          if ($a === $b) {
+            return 0;
+          }
+          return $a > $b ? 1 : -1; 
         }
       );
     } else {
       uasort($sorted_keys, 
         function ($a, $b) {
-          return ($b > $a);
+          if ($a === $b) {
+            return 0;
+          }
+          return $b > $a ? 1 : -1; 
         }
       );
     }
