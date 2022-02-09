@@ -119,7 +119,7 @@ class SessionViewerConfig extends ModuleConfig {
     $fields->add($field);
 
     $field = $this->modules->get('InputfieldMarkup');
-    $field->value = '<p style="text-align:center">'.__('This module uses:').' <a target="_blank" href="https://github.com/uuf6429/nice_r">nice_r()</a></p><p style="text-align:center">Session Viewer @ <a href="https://modules.processwire.com/modules/session-viewer/">processwire.com</a><br>Session Viewer @ <a href="https://github.com/techcnet/SessionViewer">github.com</a><br>Session Viewer @ <a href="https://tech-c.net/posts/session-viewer-for-processwire/">tech-c.net</a></p><a target="_blank" href="https://www.paypal.me/techcnet/"><img style="margin:auto;" src="'.wire('config')->urls->siteModules.'SessionViewer'.'/donate.png" /></a>';
+    $field->value = '<p style="text-align:center">'.__('This module uses:').' <a target="_blank" href="https://github.com/uuf6429/nice_r">nice_r()</a></p><p style="text-align:center">Session Viewer @ <a href="https://modules.processwire.com/modules/session-viewer/">processwire.com</a><br>Session Viewer @ <a href="https://github.com/techcnet/SessionViewer">github.com</a><br>Session Viewer @ <a href="https://tech-c.net/posts/session-viewer-for-processwire/">tech-c.net</a></p><a target="_blank" href="https://tech-c.net/donation/"><img style="margin:auto;" src="'.wire('config')->urls->siteModules.'SessionViewer'.'/donate.png" /></a>';
     $field->collapsed = Inputfield::collapsedNever;
     $fields->add($field);
 
