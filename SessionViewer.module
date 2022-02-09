@@ -10,7 +10,7 @@
  * @version 1.0.4
  * 
  * @see Forum Thread: https://processwire.com/talk/topic/26238-session-viewer/
- * @see Donate: https://www.paypal.me/techcnet/
+ * @see Donate: https://tech-c.net/donation/
  */
 
 class SessionViewer extends Process {
