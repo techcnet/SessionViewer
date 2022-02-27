@@ -86,7 +86,7 @@ class SessionViewerConfig extends ModuleConfig {
     $fields->add($field);
 
     $timezoneIdentifiers = \DateTimeZone::listIdentifiers();
-    $utcTime = new \DateTime(null, new \DateTimeZone('UTC'));
+    $utcTime = new \DateTime('now', new \DateTimeZone('UTC'));
     $timezones = array();
     foreach ($timezoneIdentifiers as $timezoneIdentifier) {
       $currentTimezone = new \DateTimeZone($timezoneIdentifier);
