@@ -1,5 +1,9 @@
 # Session Viewer for ProcessWire
 
+![GitHub](https://img.shields.io/github/license/techcnet/SessionViewer)
+![GitHub last commit](https://img.shields.io/github/last-commit/techcnet/SessionViewer)
+[![PHPMD](https://github.com/techcnet/SessionViewer/actions/workflows/phpmd.yml/badge.svg)](https://github.com/techcnet/SessionViewer/actions/workflows/phpmd.yml)
+
 Session Viewer is a module for ProcessWire to list session files and display session data. This module is helpful to display the session data of a specific session or to kick out a logged in user by simply delete his session file. After installation the module is available in the Setup menu.
 
 !["Session Viewer"](https://tech-c.net/site/assets/files/1219/screenshot.500x0-is.jpg)
